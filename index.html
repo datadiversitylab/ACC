@@ -1,4 +1,39 @@
----
-layout: index
-title: Home
----
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Animal Chromosome Counts</title><meta name="description" content="Chromosome counts for animal species, with the source of each count."><link rel="icon" href="favicon.png" type="image/svg+xml"><link rel="icon" href="favicon.ico" sizes="any"><link rel="stylesheet" href="assets/css/style.css"><script defer src="https://umami.datadiversitylab.synology.me/script.js" data-website-id="543cffef-a100-47af-9dd9-2cf39517077b" data-domains="datadiversitylab.github.io" data-tag="acc"></script></head><body><a class="skip" href="#main">Skip to content</a><header class="mast"><div class="wrap"><a class="brand" href="index.html"><img src="assets/img/logo.svg" alt="">Animal Chromosome Counts</a><nav class="links" aria-label="Main"><a href="index.html" class="on">Explore</a><a href="coverage.html">Coverage</a><a href="releases.html">Releases</a><a href="about.html">About</a><a href="contribute.html">Contribute</a><a href="https://datadiversitylab.github.io/">Data Diversity Lab</a></nav></div></header><main id="main">
+<section class="hero"><div class="wrap">
+<img class="hlogo" src="assets/img/logo.svg" alt="">
+<h1>Animal Chromosome Counts</h1>
+<p class="lead">Chromosome counts for <span id="nsp">18,347</span> animal species, with the paper each count comes from.</p>
+<form class="hsearch" id="hform" role="search"><input id="hq" type="search" placeholder="Search a species, such as Panthera leo" aria-label="Search species"><button type="submit">Search</button></form>
+<p class="facts"><span><b id="f1"></b>species</span><span><b id="f2"></b>families</span><span><b id="f3"></b>phyla</span></p>
+<p class="meta">Release of Jun 28, 2021 &middot; <a href="releases.html">All releases</a> &middot; <a href="coverage.html">Coverage</a></p>
+</div></section>
+
+<section class="band" id="chart" aria-labelledby="h-chart"><div class="wrap">
+<h2 id="h-chart">Where animal chromosome counts fall</h2>
+<p class="sub">Pick a group, from phylum down to genus.</p>
+<div class="ctl"><div><span class="lb">Group</span><div class="row" id="pa"></div></div></div>
+<details class="opts" id="opts"><summary>More options</summary>
+<div class="ctl"><div><span class="lb">Compare with</span><div class="row" id="pb"></div></div>
+<div><label for="mode">Measure</label><select id="mode"><option value="n">Haploid number (n)</option><option value="2n">Diploid number (2n)</option></select></div>
+<div><span class="lb">&nbsp;</span><label class="chk"><input type="checkbox" id="log">Log scale</label></div></div></details>
+<div id="ch"></div>
+<div class="legend" id="legend"></div>
+<div id="cap" class="stat"></div>
+<div class="acts c"><button class="lk" id="png">Download PNG</button><button class="lk" id="svg">Download SVG</button><button class="lk" id="lnk">Copy link to this chart</button></div>
+<details class="more"><summary>Show the numbers behind the chart</summary><div class="nums" id="nums"></div><button class="lk" id="tcsv">Download these numbers (CSV)</button><p class="meta">Species with several counts are drawn at their first listed count. Diploid number is twice the haploid number.</p></details>
+</div></section>
+
+<section class="section wrap" id="tbl"><h2>Browse species</h2>
+<p class="sub">Search by species, a former name, class, order or family.</p>
+<div class="tools"><input id="q" type="search" placeholder="Search" aria-label="Search species"><select id="ph" aria-label="Phylum"></select></div>
+<div class="count c" id="c" aria-live="polite"></div>
+<table><thead><tr><th>Species</th><th class="hide">Class</th><th class="hide">Order</th><th class="hide">Family</th><th class="r">Haploid (n)</th></tr></thead><tbody id="b"></tbody></table>
+<div class="pg" id="pg"></div>
+<div class="acts c" style="margin-top:14px"><a href="#" id="dl">Download all rows (CSV)</a></div></section>
+
+<section class="trio"><div class="wrap grid3">
+<div><h3>Cite</h3><p>Cite the paper, and the Zenodo record for the data.</p><div class="acts"><button class="lk" id="cr">Copy paper</button><button class="lk" id="cd">Copy data</button><button class="lk" id="cb">BibTeX</button></div></div>
+<div><h3>Releases</h3><p>Each release is a fixed table you can download.</p><div class="acts"><a href="releases.html">See releases</a></div></div>
+<div><h3>Contribute</h3><p>A new count, a correction or a missing species.</p><div class="acts"><a href="contribute.html">How to contribute</a></div></div>
+</div></section>
+</main><footer><div class="wrap"><img src="assets/img/logo.svg" alt=""><div class="fl"><a href="https://github.com/datadiversitylab/ACC">GitHub</a><a href="https://zenodo.org/records/4635457">Zenodo</a><a href="https://doi.org/10.1111/jeb.13884">Paper</a><a href="https://datadiversitylab.github.io/">Data Diversity Lab</a></div><div class="meta">Release of Jun 28, 2021 &middot; Data under <a href="https://creativecommons.org/licenses/by/1.0/">CC BY 1.0</a></div></div></footer><script src="assets/js/data.js"></script><script src="assets/js/app.js"></script><script src="assets/js/home.js"></script></body></html>

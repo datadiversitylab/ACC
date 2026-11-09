@@ -1,0 +1,133 @@
+:root{--paper:#fff;--ink:#222;--soft:#5f6368;--moss:#2f6b57;--deep:#1f3d33;--tint:#f1f6f3;--sage:#9ab9a5;--amber:#d58f26;--rule:rgba(0,0,0,.14);--hair:rgba(0,0,0,.08)}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 "Bitstream Charter","Charter",Georgia,serif}
+a{color:inherit;text-decoration-color:var(--amber);text-underline-offset:3px}
+a:hover{color:var(--moss)}
+:focus-visible{outline:2px solid var(--moss);outline-offset:2px}
+.skip{position:absolute;left:-999px;top:0;background:#fff;padding:6px 10px;font:14px Inter,sans-serif}
+.skip:focus{left:8px;top:8px;z-index:5}
+.wrap{max-width:920px;margin:0 auto;padding:0 22px}
+.narrow{max-width:40rem;margin:0 auto}
+.c{text-align:center}
+.meta{font:13px Inter,sans-serif;color:var(--soft)}
+
+/* Header */
+.mast{padding:20px 0 14px;border-bottom:1px solid var(--hair)}
+.mast .wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.08rem;text-decoration:none}
+.brand img{width:30px;height:30px;display:block}
+.links{font:14px Inter,sans-serif;display:flex;gap:6px 24px;flex-wrap:wrap;justify-content:center}
+.links a{text-decoration:none;color:var(--soft);padding:2px 0}
+.links a:hover{color:var(--moss)}
+.links a.on{color:var(--ink);text-decoration:underline;text-decoration-color:var(--amber);text-underline-offset:7px}
+
+/* Headings and intros */
+h1{font-size:2.5rem;line-height:1.15;margin:0 0 12px;letter-spacing:-.01em}
+h2{font-size:1.45rem;line-height:1.3;margin:0 0 6px;text-align:center}
+h3{font-size:1.05rem;margin:0 0 6px}
+.hero{text-align:center;padding:54px 0 40px}
+.hero .hlogo{width:68px;height:68px;margin:0 auto 14px;display:block}
+.lead{font-size:1.15rem;max-width:34rem;margin:0 auto 22px;color:#3b3f42}
+.page-intro{text-align:center;padding:48px 0 14px}
+.page-intro h1{font-size:2.1rem}
+.page-intro p{max-width:36rem;margin:0 auto}
+.sub{font:14.5px Inter,sans-serif;color:var(--soft);text-align:center;margin:0 0 18px}
+.hsearch{display:flex;max-width:30rem;margin:0 auto 22px;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:#fff}
+.hsearch input{flex:1;border:0;padding:.75rem 1.1rem;font:16px Inter,sans-serif;background:transparent;min-width:0}
+.hsearch input:focus-visible{outline:none}
+.hsearch:focus-within{outline:2px solid var(--moss);outline-offset:2px}
+.hsearch button{border:0;background:var(--moss);color:#fff;padding:0 1.3rem;font:600 14px Inter,sans-serif;cursor:pointer}
+.hsearch button:hover{background:var(--deep)}
+.facts{display:flex;justify-content:center;gap:10px 34px;flex-wrap:wrap;margin:0 0 8px;font:14px Inter,sans-serif;color:var(--soft)}
+.facts b{display:block;font:700 1.6rem/1.2 "Bitstream Charter",Charter,Georgia,serif;color:var(--moss)}
+.facts span{text-align:center}
+
+/* Bands and sections */
+.band{background:var(--tint);padding:46px 0 40px;margin-top:20px}
+.section{padding:46px 0 10px}
+.sec{border-top:1px solid var(--rule);margin-top:30px;padding-top:20px}
+.sec p{margin:0 0 8px;max-width:40em}
+
+/* Controls */
+.ctl{display:flex;flex-wrap:wrap;gap:10px 26px;margin:6px 0;font:14px Inter,sans-serif;align-items:end;justify-content:center}
+.ctl>div{display:flex;flex-direction:column;gap:2px}
+.ctl label,.ctl .lb{font:600 11.5px Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.ctl .row{display:flex;gap:10px;align-items:end}
+.ctl select,.ctl input:not([type=checkbox]),.tools select,.tools input{font:inherit;background:transparent;border:0;border-bottom:1.5px solid var(--ink);padding:.35rem .1rem;color:var(--ink);border-radius:0;min-width:7rem}
+.ctl input[type=checkbox]{accent-color:var(--moss);margin-right:6px}
+.ctl .chk{display:flex;align-items:center;padding-bottom:.35rem;text-transform:none;letter-spacing:0;font:14px Inter,sans-serif;color:var(--ink)}
+.opts{font:14px Inter,sans-serif;text-align:center;margin:4px 0 12px}
+.opts summary{cursor:pointer;color:var(--soft);display:inline-block}
+.opts[open] summary{margin-bottom:6px}
+#ch{background:#fff;padding:10px 12px 4px;margin-top:10px;border:1px solid var(--hair);border-radius:6px}
+#ch svg{display:block;width:100%;height:auto}
+.legend{font:13.5px Inter,sans-serif;color:var(--soft);margin:12px 0 0;display:flex;flex-wrap:wrap;gap:4px 22px;justify-content:center}
+.sw{display:inline-block;width:12px;height:12px;margin-right:6px;vertical-align:-1px;background:#9ab9a5}
+.sw.b{background:none;border-top:3px solid #1f4e79;height:0;vertical-align:3px}
+.sw.x{background:#d58f26}
+.stat{font:14.5px Inter,sans-serif;margin:10px auto 0;max-width:42em;text-align:center}
+.stat p{margin:2px 0}
+.acts{font:14px Inter,sans-serif;display:flex;gap:8px 22px;margin-top:10px;flex-wrap:wrap}
+.acts.c{justify-content:center}
+details{font:14px Inter,sans-serif}
+.more{text-align:center;margin-top:8px}
+.more summary{cursor:pointer;color:var(--soft)}
+.nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(7.2rem,1fr));gap:2px 16px;margin:10px 0;font:13px Inter,sans-serif;color:var(--soft);text-align:left}
+.nums b{color:var(--ink)}
+button.lk{font:inherit;background:none;border:0;padding:0;color:inherit;text-decoration:underline;text-decoration-color:var(--amber);text-underline-offset:3px;cursor:pointer}
+button.lk:hover{color:var(--moss)}
+
+/* Table */
+.tools{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:end;font:14px Inter,sans-serif;margin:14px 0 6px;justify-content:center}
+.tools input{flex:1 1 260px;max-width:28rem;min-width:0}
+.count{font:12.5px Inter,sans-serif;color:var(--soft);margin:10px 0 2px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font:600 11.5px Inter,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--soft);text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--rule)}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--hair)}
+td.t{font:13.5px Inter,sans-serif;color:var(--soft)}
+td a{font-style:italic}
+.r{text-align:right;padding-right:0}
+.pg{font:14px Inter,sans-serif;margin:16px 0 0;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.pg b{text-decoration:underline;text-decoration-color:var(--amber);text-underline-offset:4px}
+.cov th,.cov td{padding-right:12px}
+.cov .bar2{display:block;height:8px;background:#9ab9a5;min-width:2px;border-radius:2px}
+.cov .zero td{color:var(--soft)}
+.cov a{font-style:normal}
+.dd td:first-child{font:13.5px Inter,sans-serif;white-space:nowrap;padding-right:18px}
+
+/* Closing columns */
+.trio{padding:56px 0 20px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:26px 40px}
+.grid3>div{border-top:2px solid var(--moss);padding-top:12px}
+.grid3 p{margin:0 0 8px;font-size:15px}
+.grid3 .acts{margin-top:4px}
+
+/* Species page */
+.sp-head{text-align:center;padding:30px 0 6px}
+.sp-head h1{font-style:italic}
+.lin{font:14px Inter,sans-serif;color:var(--soft);margin:0 0 14px}
+.lineage a{text-decoration-color:var(--hair)}
+.nbig{font-size:3rem;font-weight:700;color:var(--moss);line-height:1}
+.nbig small{font:13px Inter,sans-serif;color:var(--soft);font-weight:400;margin-left:8px}
+.crumb{font:13px Inter,sans-serif;color:var(--soft);padding-top:22px;text-align:center}
+.note{font:14px Inter,sans-serif;background:var(--tint);padding:10px 14px;margin:14px auto;max-width:36rem;border-radius:6px;text-align:left}
+.rel{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px 26px;justify-content:center}
+.rel2{margin:0;padding:0;list-style:none}
+.rel2 li{margin:0 0 22px;max-width:46em}
+ol{padding-left:1.2rem;margin:8px 0}
+ol li{margin-bottom:8px}
+
+/* Footer */
+footer{background:var(--deep);color:#dbe7e0;margin-top:56px;padding:34px 0 40px;text-align:center;font:14px Inter,sans-serif}
+footer a{color:#fff;text-decoration-color:rgba(255,255,255,.35)}
+footer a:hover{color:#fff;text-decoration-color:var(--amber)}
+footer img{width:34px;height:34px;margin-bottom:6px}
+footer .fl{display:flex;gap:6px 24px;justify-content:center;flex-wrap:wrap;margin:8px 0 10px}
+footer .meta{color:#a9c2b6}
+
+@media(max-width:700px){
+  h1{font-size:2rem}.hero{padding:38px 0 30px}
+  .grid3{grid-template-columns:1fr}
+  .hide{display:none}.cov .hide{display:none}
+}
