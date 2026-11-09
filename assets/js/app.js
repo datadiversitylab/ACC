@@ -9,6 +9,23 @@ SP.forEach(function (s) {
   BY[s.key] = s;
   s.t.forEach(function (id, l) { (IDX[l][id] = IDX[l][id] || []).push(s); });
 });
+// What search looks at for a species: the name, plus the former name as the second text
+function spItem(s) { return { sp: s, f: fold(s.name), f2: s.orig ? fold(s.orig) : '', w: s.n0 ? 1 : 0 }; }
+// Usage events for Umami. Nothing happens if the counter is blocked or not loaded.
+function track(name, data) { try { if (window.umami && umami.track) umami.track(name, data); } catch (e) {} }
+function later(fn, ms) { var t; return function () { var a = arguments, c = this; clearTimeout(t); t = setTimeout(function () { fn.apply(c, a); }, ms); }; }
+document.addEventListener('click', function (e) {
+  var a = e.target.closest ? e.target.closest('a[href]') : null;
+  if (!a) return;
+  var h = a.getAttribute('href') || '', sp = document.body.getAttribute('data-key') || '', d = sp ? { species: sp } : undefined;
+  if (/^mailto:/.test(h)) track('email', d);
+  else if (/issues\/new/.test(h)) track('github-issue', d);
+  else if (/^https?:/.test(h) && a.hostname !== location.hostname) track('outbound', { host: a.hostname });
+  else if (/compare\.html/.test(h) && sp) track('compare-from-species', d);
+}, true);
+function $(id) { return document.getElementById(id); }
+function slugOf(k) { return (typeof SLUGX !== 'undefined' && SLUGX[k]) || k; }
+function spUrl(k) { return 'species/' + encodeURIComponent(slugOf(k)) + '.html'; }
 function fmt(x) { return x.toLocaleString('en-US'); }
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
@@ -64,9 +81,21 @@ function chartSvg(series, o) {
   function y(v) { var f = o.log ? Math.log(1 + v) / Math.log(1 + m) : v / m; return base - (m ? f : 0) * (base - top); }
   svg += '<rect width="' + W + '" height="' + H + '" fill="#ffffff"/>';
   for (k = 1; k <= N; k++) {
-    var v = val(A, k), hi = o.x != null && Math.round(o.x) === k;
+    var v = val(A, k), hi = o.x != null && Math.round(o.x) === k, hi2 = o.x2 != null && Math.round(o.x2) === k;
     var tip = 'n = ' + k + (k === N ? '+' : '') + ': ' + fmt(A.c[k]) + ' species';
-    svg += '<rect x="' + (L + (k - 1) * bw + 1).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + Math.max(bw - 2, 1).toFixed(1) + '" height="' + (base - y(v)).toFixed(1) + '" fill="' + (hi ? COL_X : COL_A) + '"><title>' + tip + '</title></rect>';
+    svg += '<rect class="bar" x="' + (L + (k - 1) * bw + 1).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + Math.max(bw - 2, 1).toFixed(1) + '" height="' + (base - y(v)).toFixed(1) + '" fill="' + (hi ? COL_X : hi2 ? COL_B : COL_A) + '"><title>' + tip + '</title></rect>';
+  }
+  if (o.lab) {
+    var labs = {};
+    [[o.x, o.lab[0]], [o.x2, o.lab[1]]].forEach(function (p) {
+      if (p[0] == null) return;
+      var kk = Math.min(Math.round(p[0]), N);
+      if (kk >= 1) (labs[kk] = labs[kk] || []).push(p[1]);
+    });
+    Object.keys(labs).forEach(function (kk) {
+      var both = labs[kk].length > 1, col = both ? '#222' : labs[kk][0] === o.lab[0] ? '#a35f0f' : COL_B;
+      svg += '<text x="' + (L + (kk - 1) * bw + bw / 2).toFixed(1) + '" y="' + (y(val(A, +kk)) - 6).toFixed(1) + '" font-size="13" font-weight="700" text-anchor="middle" fill="' + col + '" font-family="Inter,sans-serif">' + labs[kk].join(' ') + '</text>';
+    });
   }
   if (two) {
     var d = '';
@@ -95,11 +124,13 @@ function chartSvg(series, o) {
 }
 
 function save(name, type, data) {
+  track('download', { file: name.replace(/^acc-.*\./, 'acc.') });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type: type }));
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
 }
 function savePng(el, name) {
+  track('download', { file: 'acc.png' });
   var svg = el.querySelector('svg'), s = new XMLSerializer().serializeToString(svg), img = new Image();
   img.onload = function () {
     var c = document.createElement('canvas'); c.width = 1440; c.height = Math.round(1440 * img.height / img.width);
@@ -117,43 +148,153 @@ function speciesCsv(list) {
   return out.join('\n');
 }
 function copy(text, btn) {
+  track('copy', { what: btn.id || 'text' });
   var t = btn.textContent;
   function done() { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = t; }, 1400); }
   if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
 }
 
-// Group picker: a level menu plus a type-ahead box for the group name
+// Typing help: matching that ignores case and accents, finds any word, and forgives small typos
+function fold(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
+function lev(a, b) {
+  var p = [], i, j, c;
+  for (j = 0; j <= b.length; j++) p[j] = j;
+  for (i = 1; i <= a.length; i++) {
+    var prev = p[0]; p[0] = i;
+    for (j = 1; j <= b.length; j++) {
+      c = p[j];
+      p[j] = Math.min(p[j] + 1, p[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = c;
+    }
+  }
+  return p[b.length];
+}
+// items: [{f: folded name, f2: folded second name (optional), w: weight}]
+function rank(items, q, limit) {
+  q = fold(q).trim();
+  if (!q) return [];
+  var out = [], seen = {};
+  items.forEach(function (it, k) {
+    var best = 9;
+    [it.f, it.f2].forEach(function (f, j) {
+      if (!f) return;
+      var s = f.indexOf(q) === 0 ? 0 : f.indexOf(' ' + q) > -1 ? 1 : f.indexOf(q) > -1 ? 2 : 9;
+      if (s < 9) best = Math.min(best, s + j * 0.5);
+    });
+    if (best < 9) { out.push({ it: it, s: best }); seen[k] = 1; }
+  });
+  if (out.length < 4 && q.length >= 3) {
+    var tol = q.length > 5 ? 2 : 1;
+    items.forEach(function (it, k) {
+      if (seen[k]) return;
+      var d = 9;
+      [it.f, it.f2].forEach(function (f) {
+        if (!f) return;
+        f.split(' ').concat([f.slice(0, q.length)]).forEach(function (w) {
+          if (Math.abs(w.length - q.length) <= tol) d = Math.min(d, lev(q, w));
+        });
+      });
+      if (d <= tol) out.push({ it: it, s: 5 + d });
+    });
+  }
+  out.sort(function (a, b) { return a.s - b.s || (b.it.w || 0) - (a.it.w || 0) || (a.it.f < b.it.f ? -1 : 1); });
+  return out.slice(0, limit).map(function (x) { return x.it; });
+}
+function mark(name, q) {
+  var i = fold(name).indexOf(fold(q).trim());
+  q = fold(q).trim();
+  return i > -1 && q ? esc(name.slice(0, i)) + '<b>' + esc(name.slice(i, i + q.length)) + '</b>' + esc(name.slice(i + q.length)) : esc(name);
+}
+
+// A suggestion list under a text box, with keyboard and screen reader support
+var comboId = 0;
+function Combo(input, o) {
+  var list = document.createElement('ul'), cur = [], act = -1, typed = false;
+  list.className = 'sug'; list.id = 'sug' + (++comboId); list.setAttribute('role', 'listbox'); list.hidden = true;
+  (o.host || input.parentNode).appendChild(list);
+  input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-expanded', 'false'); input.setAttribute('aria-controls', list.id); input.setAttribute('autocomplete', 'off');
+  function close() { list.hidden = true; act = -1; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); }
+  function draw() {
+    var q = input.value;
+    list.innerHTML = cur.map(function (it, i) {
+      return '<li role="option" id="' + list.id + 'o' + i + '" data-i="' + i + '"' + (i === act ? ' class="act" aria-selected="true"' : '') + '>' + o.render(it, typed ? q : '') + '</li>';
+    }).join('') || (typed && q.trim() ? '<li class="none">No match. Try fewer letters.</li>' : '');
+    list.hidden = !list.innerHTML;
+    input.setAttribute('aria-expanded', String(!list.hidden));
+    if (act > -1) input.setAttribute('aria-activedescendant', list.id + 'o' + act); else input.removeAttribute('aria-activedescendant');
+  }
+  function show() {
+    cur = typed && input.value.trim() ? rank(o.items(), input.value, o.limit || 8) : (o.empty ? o.empty() : []);
+    act = -1; draw();
+  }
+  function pick(it) { close(); o.onpick(it); }
+  input.addEventListener('input', function () { typed = true; show(); });
+  input.addEventListener('focus', function () { typed = false; if (o.select) input.select(); show(); });
+  input.addEventListener('blur', function () { close(); if (o.onblur) o.onblur(); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      if (list.hidden) show();
+      if (!cur.length) return;
+      e.preventDefault();
+      act = e.key === 'ArrowDown' ? (act + 1) % cur.length : (act < 1 ? cur.length - 1 : act - 1);
+      draw();
+      var el = document.getElementById(list.id + 'o' + act); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (act > -1 && !list.hidden) { e.preventDefault(); pick(cur[act]); }
+      else if (o.enterPicksFirst && typed && cur.length) { e.preventDefault(); pick(cur[0]); }
+    } else if (e.key === 'Escape') { close(); }
+  });
+  list.addEventListener('mousedown', function (e) { e.preventDefault(); });
+  list.addEventListener('click', function (e) {
+    var li = e.target.closest ? e.target.closest('li[data-i]') : null;
+    if (li) pick(cur[+li.getAttribute('data-i')]);
+  });
+  return { close: close };
+}
+
+// Group picker: one box that searches every level at once
+var GROUPS = null;
+function groupItems() {
+  if (GROUPS) return GROUPS;
+  GROUPS = [];
+  LV.forEach(function (l, lv) {
+    D.T[lv].forEach(function (name, id) {
+      var n = IDX[lv][id].length;
+      GROUPS.push({ lv: lv, id: id, name: name, f: fold(name), w: n, n: n });
+    });
+  });
+  return GROUPS;
+}
 function Picker(root, o) {
-  // o: {none: bool, g: group, onchange}
-  var sel = document.createElement('select'), inp = document.createElement('input'), dl = document.createElement('datalist');
-  var id = 'dl' + Math.random().toString(36).slice(2, 7);
-  sel.setAttribute('aria-label', o.label + ', level');
-  inp.setAttribute('aria-label', o.label + ', name'); inp.setAttribute('list', id); inp.setAttribute('autocomplete', 'off'); inp.placeholder = 'Type a name';
-  dl.id = id;
-  var opts = [[o.none ? 'none' : 'all', o.none ? 'None' : 'All animals']].concat(LV.map(function (l) { return [l, LN[l]]; }));
-  sel.innerHTML = opts.map(function (x) { return '<option value="' + x[0] + '">' + x[1] + '</option>'; }).join('');
-  root.appendChild(sel); root.appendChild(inp); root.appendChild(dl);
-  var g = o.g || { lv: -1 };
-  function fill(l) {
-    var list = D.T[l].map(function (n, i) { return [n, IDX[l][i].length]; }).sort(function (a, b) { return b[1] - a[1]; });
-    dl.innerHTML = list.map(function (x) { return '<option value="' + esc(x[0]) + '" label="' + x[1] + ' species"></option>'; }).join('');
-  }
-  function show() { inp.style.display = (sel.value === 'all' || sel.value === 'none') ? 'none' : ''; }
-  function set(gg) {
-    g = gg;
-    if (gg.lv < 0) { sel.value = o.none ? 'none' : 'all'; inp.value = ''; }
-    else { sel.value = LV[gg.lv]; fill(gg.lv); inp.value = D.T[gg.lv][gg.id]; }
-    show();
-  }
-  sel.onchange = function () {
-    show();
-    if (sel.value === 'all' || sel.value === 'none') { g = { lv: -1, none: sel.value === 'none' }; o.onchange(g); return; }
-    fill(LV.indexOf(sel.value)); inp.value = ''; inp.focus();
-  };
-  inp.oninput = function () {
-    var l = LV.indexOf(sel.value), id = D.T[l].indexOf(inp.value);
-    if (id > -1) { g = { lv: l, id: id }; o.onchange(g); }
-  };
+  var wrap = document.createElement('div'), inp = document.createElement('input'), g = o.g || { lv: -1 };
+  wrap.className = 'pk';
+  inp.type = 'text'; inp.setAttribute('aria-label', o.label);
+  inp.placeholder = o.none ? 'Optional. Type a group to compare' : 'Type a group, such as Carnivora';
+  wrap.appendChild(inp); root.appendChild(wrap);
+  function text(gg) { return gg.lv < 0 ? (o.none ? '' : 'All animals') : D.T[gg.lv][gg.id]; }
+  function set(gg) { g = gg; inp.value = text(gg); }
+  var popular = ['class:Mammalia', 'class:Aves', 'class:Insecta', 'class:Actinopterygii', 'class:Reptilia', 'class:Amphibia'];
+  Combo(inp, {
+    limit: 9, select: true, enterPicksFirst: true,
+    items: groupItems,
+    empty: function () {
+      var l = popular.map(function (s) { var x = gParse(s); return { lv: x.lv, id: x.id, name: gName(x), n: gMembers(x).length }; });
+      return (o.none ? [{ lv: -1, none: true, name: 'None', n: 0 }] : [{ lv: -1, name: 'All animals', n: SP.length }]).concat(l);
+    },
+    render: function (it, q) {
+      var tag = it.lv < 0 ? '' : LN[LV[it.lv]] + ', ' + fmt(it.n) + ' species';
+      return '<span>' + (q ? mark(it.name, q) : esc(it.name)) + '</span><small>' + tag + '</small>';
+    },
+    onpick: function (it) {
+      g = it.lv < 0 ? { lv: -1, none: !!it.none } : { lv: it.lv, id: it.id };
+      inp.value = text(g); o.onchange(g);
+    },
+    onblur: function () {
+      if (o.none && !inp.value.trim() && !g.none) { g = { lv: -1, none: true }; o.onchange(g); }
+      inp.value = text(g);
+    }
+  });
   set(g);
   return { set: set, get: function () { return g; } };
 }

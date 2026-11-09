@@ -8,10 +8,15 @@ Please cite Román-Palacios C, Medina CA, Zhan SH, Barker MS (2021) J Evol Biol 
 
 ## Layout
 
-- `index.html`, `species.html`, `releases.html`, `about.html`, `contribute.html`: plain static pages
+- `index.html`, `compare.html`, `learn.html`, `coverage.html`, `releases.html`, `about.html`, `contribute.html`: plain static pages
+- `species/`: one static page per species, built by the R script below
 - `assets/js/data.js`: the table the pages read (built by the R script below)
+- `assets/js/slugs.js`: the few species whose file name differs from their name in the data
 - `data/`: release CSVs and the phylum summary
-- `data-raw/build_data.R`: builds `assets/js/data.js`
+- `data-raw/build_data.R`: builds `assets/js/data.js`, `assets/js/slugs.js`, `species/`, `sitemap.xml` and `robots.txt`
+- `data-raw/species-template.html`: the template every species page is filled into
+- `data-raw/logo.R`: draws the logo files in `assets/img/`, `favicon.svg` and the social preview image `assets/img/social.png`
+- `assets/js/wiki.js`: loads species photos and credits from Wikipedia and Wikimedia Commons in the visitor's browser
 
 ## Update the data
 
