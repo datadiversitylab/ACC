@@ -23,7 +23,7 @@ var picker = Picker(pk, { label: 'Another group', g: { lv: -1 }, onchange: funct
 pk.parentNode.style.display = 'none';
 var chEl = document.getElementById('ch'), mode = 'n', logOn = false;
 function draw() {
-  var mem = gMembers(cur), b = bins(mem, mode), u = mode === '2n' ? '2n' : 'n', vs = s.n.map(function (c) { return mode === '2n' ? c * 2 : c; });
+  var mem = gMembers(cur), b = bins(mem, mode), u = mode === '2n' ? '2n' : 'n', vs = s.v.map(function (c) { return mode === '2n' ? c * 2 : c; });
   var t = b.tot, pct = function (x) { return Math.round(x / t * 100); };
   chEl.innerHTML = chartSvg([{ b: b, name: gName(cur) }], { xs: vs, log: logOn, mode: mode });
   var cap;
@@ -34,7 +34,7 @@ function draw() {
       mem.forEach(function (m) { m.v.forEach(function (x) { if ((mode === '2n' ? x * 2 : x) === v) eq++; }); });
       return (vs.length > 1 ? u + ' = ' + v + ' is' : 'With ' + u + ' = ' + v + ', <i>' + esc(s.name) + '</i> is') + ' higher than ' + pct(lo) + '% of the counts, equal to ' + pct(eq) + '% and lower than ' + pct(t - lo - eq) + '%';
     });
-    cap = 'In ' + esc(gName(cur)) + ' (' + fmt(t) + ' counts from ' + fmt(b.sp) + ' species) the median is ' + b.med + '. ' + (vs.length > 1 ? 'For <i>' + esc(s.name) + '</i>, ' : '') + parts.join('. ') + '.';
+    cap = 'In ' + esc(gName(cur)) + ' (' + fmt(t) + ' counts from ' + fmt(b.sp) + ' species) the median is ' + b.med + '. ' + (vs.length ? (vs.length > 1 ? 'For <i>' + esc(s.name) + '</i>, ' : '') + parts.join('. ') : '<i>' + esc(s.name) + '</i> has no counts at these confidence levels') + '.';
   }
   document.getElementById('cap').innerHTML = cap;
   document.getElementById('ex').href = '../' + gLink(cur);

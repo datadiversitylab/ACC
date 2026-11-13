@@ -59,9 +59,9 @@ function sentence() {
 var chEl = $('ch'), pk = null;
 function drawChart() {
   var mem = gMembers(grp), b = bins(mem, mode), k = mode === '2n' ? 2 : 1, t = b.tot;
-  var xa = A.n.map(function (c) { return c * k; }), xb = B.n.map(function (c) { return c * k; });
+  var xa = A.v.map(function (c) { return c * k; }), xb = B.v.map(function (c) { return c * k; });
   var pct = function (x) { return Math.round(x / t * 100); };
-  function part(tag, xs) { return xs.map(function (v) { return tag + (xs.length > 1 ? ' (' + (mode === '2n' ? '2n' : 'n') + ' = ' + v + ')' : '') + ' is higher than ' + pct(below(mem, mode, v)) + '% of the counts'; }); }
+  function part(tag, xs) { return !xs.length ? [tag + ' has no counts at these confidence levels'] : xs.map(function (v) { return tag + (xs.length > 1 ? ' (' + (mode === '2n' ? '2n' : 'n') + ' = ' + v + ')' : '') + ' is higher than ' + pct(below(mem, mode, v)) + '% of the counts'; }); }
   chEl.innerHTML = chartSvg([{ b: b, name: gName(grp) }], { xs: xa, xs2: xb, lab: ['A', 'B'], log: logOn, mode: mode });
   $('legend').innerHTML = '<span><i class="sw x"></i>A: ' + esc(A.name) + '</span><span><i class="sw bb"></i>B: ' + esc(B.name) + '</span><span>Dashed line: median</span>';
   $('cap').innerHTML = t ? 'In ' + esc(gName(grp)) + ' (' + fmt(t) + ' counts from ' + fmt(b.sp) + ' species) the median is ' + b.med + '. ' + part('A', xa).concat(part('B', xb)).join('. ') + '.' : 'No counts in ' + esc(gName(grp)) + ' at these confidence levels.';
