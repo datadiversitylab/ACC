@@ -1,9 +1,9 @@
 // Species page. The text is already in the HTML. This adds the chart and the buttons.
 var key = document.body.getAttribute('data-key'), s = BY[key], h1 = readHash();
 document.getElementById('cmpband').innerHTML = '<div class="wrap"><h2 id="h-cmp">How it compares</h2>' +
-  '<p class="sub">Pick a group to see where <i>' + esc(s.name) + '</i> falls. It\'s the amber bar.</p>' +
+  '<p class="sub">Pick a group to see where <i>' + esc(s.name) + '</i> falls. ' + 'It\'s in amber.' + '</p>' +
   '<div class="ctl"><div><label for="cg">Group</label><select id="cg"></select></div><div><span class="lb">&nbsp;</span><div class="row" id="cpick"></div></div>' +
-  '<div><label for="mode">Measure</label><select id="mode"><option value="n">Haploid (n)</option><option value="2n">Diploid (2n)</option></select></div>' +
+  '<div><label for="cs">Counts to include</label><select id="cs"><option value="hm">High and Medium confidence</option><option value="h">High confidence only</option><option value="all">All counts</option><option value="l">Low confidence only</option></select></div><div><label for="mode">Measure</label><select id="mode"><option value="n">Haploid (n)</option><option value="2n">Diploid (2n)</option></select></div>' +
   '<div><span class="lb">&nbsp;</span><label class="chk"><input type="checkbox" id="log">Log scale</label></div></div>' +
   '<div id="ch"></div>' +
   '<div class="legend"><span><i class="sw x"></i>This species</span><span><i class="sw"></i>Other species in the group</span><span>Dashed line: median</span></div>' +
@@ -23,21 +23,29 @@ var picker = Picker(pk, { label: 'Another group', g: { lv: -1 }, onchange: funct
 pk.parentNode.style.display = 'none';
 var chEl = document.getElementById('ch'), mode = 'n', logOn = false;
 function draw() {
-  var b = bins(gMembers(cur), mode), v = mode === '2n' ? s.n0 * 2 : s.n0, below = 0, same = 0, above = 0;
-  gMembers(cur).forEach(function (m) {
-    var x = mode === '2n' ? m.n0 * 2 : m.n0;
-    if (x < v) below++; else if (x === v) same++; else above++;
-  });
-  var t = b.tot, pct = function (x) { return Math.round(x / t * 100); }, u = mode === '2n' ? '2n' : 'n';
-  chEl.innerHTML = chartSvg([{ b: b, name: gName(cur) }], { x: v, log: logOn, mode: mode });
-  document.getElementById('cap').innerHTML = 'In ' + esc(gName(cur)) + ' (' + fmt(t) + ' species) the median is ' + b.med + '. With ' + u + ' = ' + v + ', <i>' + esc(s.name) + '</i> is higher than ' + pct(below) + '% of the species, equal to ' + pct(same) + '% and lower than ' + pct(above) + '%.';
+  var mem = gMembers(cur), b = bins(mem, mode), u = mode === '2n' ? '2n' : 'n', vs = s.n.map(function (c) { return mode === '2n' ? c * 2 : c; });
+  var t = b.tot, pct = function (x) { return Math.round(x / t * 100); };
+  chEl.innerHTML = chartSvg([{ b: b, name: gName(cur) }], { xs: vs, log: logOn, mode: mode });
+  var cap;
+  if (!t) cap = 'No counts in ' + esc(gName(cur)) + ' at these confidence levels.';
+  else {
+    var parts = vs.map(function (v) {
+      var lo = below(mem, mode, v), eq = 0;
+      mem.forEach(function (m) { m.v.forEach(function (x) { if ((mode === '2n' ? x * 2 : x) === v) eq++; }); });
+      return (vs.length > 1 ? u + ' = ' + v + ' is' : 'With ' + u + ' = ' + v + ', <i>' + esc(s.name) + '</i> is') + ' higher than ' + pct(lo) + '% of the counts, equal to ' + pct(eq) + '% and lower than ' + pct(t - lo - eq) + '%';
+    });
+    cap = 'In ' + esc(gName(cur)) + ' (' + fmt(t) + ' counts from ' + fmt(b.sp) + ' species) the median is ' + b.med + '. ' + (vs.length > 1 ? 'For <i>' + esc(s.name) + '</i>, ' : '') + parts.join('. ') + '.';
+  }
+  document.getElementById('cap').innerHTML = cap;
   document.getElementById('ex').href = '../' + gLink(cur);
-  writeHash({ g: gStr(cur), m: mode === '2n' ? '2n' : '', log: logOn ? 1 : '' });
+  writeHash({ cs: CS === 'hm' ? '' : CS, g: gStr(cur), m: mode === '2n' ? '2n' : '', log: logOn ? 1 : '' });
 }
 sel.onchange = function () {
   if (sel.value === 'other') { pk.parentNode.style.display = ''; return; }
   pk.parentNode.style.display = 'none'; cur = gParse(sel.value); draw(); chartEvent();
 };
+document.getElementById('cs').value = CS;
+document.getElementById('cs').onchange = function () { setCS(this.value); draw(); track('counts', { set: this.value }); };
 document.getElementById('mode').onchange = function () { mode = this.value; draw(); chartEvent(); };
 document.getElementById('log').onchange = function () { logOn = this.checked; draw(); };
 document.getElementById('png').onclick = function () { savePng(chEl, 'acc-' + key + '.png'); };

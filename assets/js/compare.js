@@ -40,26 +40,31 @@ function card(s, tag) {
     '<p class="lineage">' + lin + '</p>' +
     '<p><span class="nbig">' + s.n.join(', ') + '<small>haploid' + (s.n.length > 1 ? ' counts' : '') + '</small></span></p>' +
     '<p class="meta">' + (s.two ? 'Diploid number in the source: ' + esc(s.two) : '&nbsp;') + '</p>' +
-    (s.n.length > 1 ? '<p><span class="flag">Conflicting counts</span></p>' : '') + '</div>';
+    '<div class="cfs">' + cfLines(s) + '</div></div>';
 }
 function ratio(a, b) { var r = Math.round(a / b * 10) / 10; return String(r).replace(/\.0$/, ''); }
 function sentence() {
-  var u = mode === '2n' ? '2n' : 'n', k = mode === '2n' ? 2 : 1, a = A.n0 * k, b = B.n0 * k, hi, lo, hn, ln;
+  var u = mode === '2n' ? '2n' : 'n', k = mode === '2n' ? 2 : 1;
   if (A === B) return '';
-  if (a === b) return 'Both have ' + u + ' = ' + a + '.';
-  if (a > b) { hi = a; lo = b; hn = A.name; ln = B.name; } else { hi = b; lo = a; hn = B.name; ln = A.name; }
-  return '<i>' + esc(hn) + '</i> has ' + u + ' = ' + hi + ' and <i>' + esc(ln) + '</i> has ' + u + ' = ' + lo + '. That is ' + (hi - lo) + ' more, or ' + ratio(hi, lo) + ' times as many.' +
-    ((A.n.length > 1 || B.n.length > 1) ? ' A species with conflicting counts is compared at its first count.' : '');
+  function vals(x) { return x.n.map(function (c) { return c * k; }); }
+  var va = vals(A), vb = vals(B);
+  if (va.length === 1 && vb.length === 1) {
+    var a = va[0], b = vb[0], hi, lo, hn, ln;
+    if (a === b) return 'Both have ' + u + ' = ' + a + '.';
+    if (a > b) { hi = a; lo = b; hn = A.name; ln = B.name; } else { hi = b; lo = a; hn = B.name; ln = A.name; }
+    return '<i>' + esc(hn) + '</i> has ' + u + ' = ' + hi + ' and <i>' + esc(ln) + '</i> has ' + u + ' = ' + lo + '. That is ' + (hi - lo) + ' more, or ' + ratio(hi, lo) + ' times as many.';
+  }
+  return '<i>' + esc(A.name) + '</i> has ' + u + ' = ' + va.join(', ') + ' and <i>' + esc(B.name) + '</i> has ' + u + ' = ' + vb.join(', ') + '.';
 }
 var chEl = $('ch'), pk = null;
 function drawChart() {
-  var b = bins(gMembers(grp), mode), k = mode === '2n' ? 2 : 1, a = A.n0 * k, c = B.n0 * k, t = b.tot;
-  var pa = 0, pb = 0;
-  gMembers(grp).forEach(function (m) { var x = m.n0 * k; if (x < a) pa++; if (x < c) pb++; });
+  var mem = gMembers(grp), b = bins(mem, mode), k = mode === '2n' ? 2 : 1, t = b.tot;
+  var xa = A.n.map(function (c) { return c * k; }), xb = B.n.map(function (c) { return c * k; });
   var pct = function (x) { return Math.round(x / t * 100); };
-  chEl.innerHTML = chartSvg([{ b: b, name: gName(grp) }], { x: a, x2: c, lab: ['A', 'B'], log: logOn, mode: mode });
+  function part(tag, xs) { return xs.map(function (v) { return tag + (xs.length > 1 ? ' (' + (mode === '2n' ? '2n' : 'n') + ' = ' + v + ')' : '') + ' is higher than ' + pct(below(mem, mode, v)) + '% of the counts'; }); }
+  chEl.innerHTML = chartSvg([{ b: b, name: gName(grp) }], { xs: xa, xs2: xb, lab: ['A', 'B'], log: logOn, mode: mode });
   $('legend').innerHTML = '<span><i class="sw x"></i>A: ' + esc(A.name) + '</span><span><i class="sw bb"></i>B: ' + esc(B.name) + '</span><span>Dashed line: median</span>';
-  $('cap').innerHTML = 'In ' + esc(gName(grp)) + ' (' + fmt(t) + ' species) the median is ' + b.med + '. A is higher than ' + pct(pa) + '% of the species and B is higher than ' + pct(pb) + '%.';
+  $('cap').innerHTML = t ? 'In ' + esc(gName(grp)) + ' (' + fmt(t) + ' counts from ' + fmt(b.sp) + ' species) the median is ' + b.med + '. ' + part('A', xa).concat(part('B', xb)).join('. ') + '.' : 'No counts in ' + esc(gName(grp)) + ' at these confidence levels.';
 }
 function draw() {
   $('cards').innerHTML = card(A, 'A') + card(B, 'B');
@@ -70,9 +75,10 @@ function draw() {
     if (auto) { grp = sharedGroup(); if (pk) pk.set(grp); }
     drawChart();
   }
-  writeHash({ a: A ? A.key : '', b: B ? B.key : '', g: auto ? '' : gStr(grp), m: mode === '2n' ? '2n' : '', log: logOn ? 1 : '' });
+  writeHash({ cs: CS === 'hm' ? '' : CS, a: A ? A.key : '', b: B ? B.key : '', g: auto ? '' : gStr(grp), m: mode === '2n' ? '2n' : '', log: logOn ? 1 : '' });
 }
 pk = Picker($('cpk'), { label: 'Group for the chart', g: grp, onchange: function (g) { grp = g; auto = false; draw(); } });
+$('cs').value = CS; $('cs').onchange = function () { setCS(this.value); draw(); track('counts', { set: this.value }); };
 $('mode').value = mode; $('log').checked = logOn;
 $('mode').onchange = function () { mode = this.value; draw(); };
 $('log').onchange = function () { logOn = this.checked; draw(); };

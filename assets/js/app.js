@@ -2,8 +2,35 @@
 var LV = ['phylum', 'class', 'order', 'family', 'genus'];
 var LN = { phylum: 'Phylum', class: 'Class', order: 'Order', family: 'Family', genus: 'Genus' };
 var SP = D.S.map(function (r, i) {
-  return { i: i, key: r[0], name: r[0].replace(/_/g, ' '), orig: r[1] ? r[1].replace(/_/g, ' ') : '', t: r[2], n: r[3], two: r[4], refs: r[5], n0: r[3][0] };
+  return { i: i, key: r[0], name: r[0].replace(/_/g, ' '), orig: r[1] ? r[1].replace(/_/g, ' ') : '', t: r[2], n: r[3], two: r[4], refs: r[5], n0: r[3][0], cf: r[6] || null };
 });
+// Confidence of each count, from how it sits among its relatives. Same words as the species pages.
+var CFN = { H: 'High', M: 'Medium', L: 'Low' };
+function cfLines(s) {
+  var c = s.cf, link = 'learn.html#confidence';
+  if (!c) return '<p class="flagline"><a class="cf cf-N" href="' + link + '">Not rated</a> Too few relatives to compare.</p>';
+  var rg = function (a, b) { return 'n = ' + (a === b ? a : a + ' to ' + b); };
+  var g = 'the ' + LV[c[0]] + ' ' + (c[0] === 4 ? '<i>' + esc(D.T[4][s.t[4]]) + '</i>' : esc(D.T[c[0]][s.t[c[0]]]));
+  return s.n.map(function (n, i) {
+    var t = c[6].charAt(i), sm;
+    if (t === 'H') sm = 'Within the middle half of the ' + c[1] + ' other species in ' + g + ' (' + rg(c[2], c[3]) + ').';
+    else if (t === 'M') sm = 'Outside the middle half (' + rg(c[2], c[3]) + '), but inside the usual range (' + rg(c[4], c[5]) + '), of the ' + c[1] + ' other species in ' + g + '.';
+    else sm = 'Outside the usual range (' + rg(c[4], c[5]) + ') of the ' + c[1] + ' other species in ' + g + '.';
+    if (c[0] <= 1) sm += ' This is a broad comparison.';
+    return '<p class="flagline">' + (s.n.length > 1 ? 'n = ' + n + ' ' : '') + '<a class="cf cf-' + t + '" href="' + link + '">' + CFN[t] + ' confidence</a> ' + sm + '</p>';
+  }).join('');
+}
+// Which counts the charts use. Each species adds every count that passes, so the bars count counts.
+// Not rated counts pass unless the choice is High only or Low only.
+var CSETS = { hm: 'HMN', h: 'H', all: 'HMLN', l: 'L' };
+var CS = CSETS[readHash().cs] ? readHash().cs : 'hm';
+function setCS(k) {
+  CS = k;
+  SP.forEach(function (s) {
+    s.v = s.n.filter(function (c, i) { return CSETS[k].indexOf(s.cf ? s.cf[6].charAt(i) : 'N') > -1; });
+  });
+}
+setCS(CS);
 var BY = {}, IDX = LV.map(function () { return {}; });
 SP.forEach(function (s) {
   BY[s.key] = s;
@@ -56,18 +83,28 @@ function writeHash(o) {
 }
 
 // Histogram numbers for a set of species
-function bins(members, mode) {
-  var N = mode === '2n' ? 80 : 40, c = [], k, vals = [];
+function bins(members, mode, first) {
+  var N = mode === '2n' ? 80 : 40, c = [], k, vals = [], sp = 0;
   for (k = 0; k <= N; k++) c.push(0);
   members.forEach(function (s) {
-    var v = mode === '2n' ? s.n0 * 2 : s.n0;
-    vals.push(v);
-    c[Math.min(Math.round(v), N)]++;
+    var a = first ? [s.n0] : s.v;
+    if (a.length) sp++;
+    a.forEach(function (x) {
+      var v = mode === '2n' ? x * 2 : x;
+      vals.push(v);
+      c[Math.min(Math.round(v), N)]++;
+    });
   });
   vals.sort(function (a, b) { return a - b; });
   var mx = 0, mode1 = 0;
   for (k = 1; k <= N; k++) if (c[k] > mx) { mx = c[k]; mode1 = k; }
-  return { N: N, c: c, tot: vals.length, med: vals.length ? vals[Math.floor(vals.length / 2)] : 0, mode: mode1, modeN: mx, lo: vals[0], hi: vals[vals.length - 1] };
+  return { N: N, c: c, tot: vals.length, sp: sp, n: members.length, med: vals.length ? vals[Math.floor(vals.length / 2)] : 0, mode: mode1, modeN: mx, lo: vals[0], hi: vals[vals.length - 1] };
+}
+// How many counts in a group sit below a value
+function below(members, mode, v) {
+  var p = 0;
+  members.forEach(function (s) { s.v.forEach(function (x) { if ((mode === '2n' ? x * 2 : x) < v) p++; }); });
+  return p;
 }
 
 // Chart. series: [{b: bins, name}], opts: {log, x (highlight value), mode}
@@ -81,13 +118,13 @@ function chartSvg(series, o) {
   function y(v) { var f = o.log ? Math.log(1 + v) / Math.log(1 + m) : v / m; return base - (m ? f : 0) * (base - top); }
   svg += '<rect width="' + W + '" height="' + H + '" fill="#ffffff"/>';
   for (k = 1; k <= N; k++) {
-    var v = val(A, k), hi = o.x != null && Math.round(o.x) === k, hi2 = o.x2 != null && Math.round(o.x2) === k;
-    var tip = 'n = ' + k + (k === N ? '+' : '') + ': ' + fmt(A.c[k]) + ' species';
+    var v = val(A, k), hi = o.xs ? o.xs.some(function (x) { return Math.min(Math.round(x), N) === k; }) : o.x != null && Math.round(o.x) === k, hi2 = o.xs2 ? o.xs2.some(function (x) { return Math.min(Math.round(x), N) === k; }) : o.x2 != null && Math.round(o.x2) === k;
+    var tip = 'n = ' + k + (k === N ? '+' : '') + ': ' + fmt(A.c[k]) + ' counts';
     svg += '<rect class="bar" x="' + (L + (k - 1) * bw + 1).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + Math.max(bw - 2, 1).toFixed(1) + '" height="' + (base - y(v)).toFixed(1) + '" fill="' + (hi ? COL_X : hi2 ? COL_B : COL_A) + '"><title>' + tip + '</title></rect>';
   }
   if (o.lab) {
     var labs = {};
-    [[o.x, o.lab[0]], [o.x2, o.lab[1]]].forEach(function (p) {
+    (o.xs ? o.xs.map(function (x) { return [x, o.lab[0]]; }) : [[o.x, o.lab[0]]]).concat(o.xs2 ? o.xs2.map(function (x) { return [x, o.lab[1]]; }) : [[o.x2, o.lab[1]]]).forEach(function (p) {
       if (p[0] == null) return;
       var kk = Math.min(Math.round(p[0]), N);
       if (kk >= 1) (labs[kk] = labs[kk] || []).push(p[1]);
@@ -110,7 +147,7 @@ function chartSvg(series, o) {
   ticks.forEach(function (t) {
     svg += '<text x="' + (L + (t - 1) * bw + bw / 2).toFixed(1) + '" y="' + (H - 16) + '" font-size="12" text-anchor="middle" fill="#5f6368" font-family="Inter,sans-serif">' + (t === N ? t + '+' : t) + '</text>';
   });
-  var xl = (o.mode === '2n' ? 'diploid number (2n)' : 'haploid number (n)') + ', ' + (two ? 'share of each group on the vertical axis' : 'species on the vertical axis') + (o.log ? ', log scale' : '');
+  var xl = (o.mode === '2n' ? 'diploid number (2n)' : 'haploid number (n)') + ', ' + (two ? 'share of each group on the vertical axis' : 'counts on the vertical axis') + (o.log ? ', log scale' : '');
   svg += '<text x="' + (W / 2) + '" y="' + (H - 2) + '" font-size="12" text-anchor="middle" fill="#5f6368" font-family="Inter,sans-serif">' + xl + '</text>';
   series.forEach(function (s, i) {
     if (!s.b.tot) return;
@@ -119,7 +156,7 @@ function chartSvg(series, o) {
     var flip = mx > W - 110;
     svg += '<text x="' + (flip ? mx - 5 : mx + 5) + '" text-anchor="' + (flip ? 'end' : 'start') + '" y="' + ly + '" font-size="12" fill="' + (i ? COL_B : '#222') + '" font-family="Inter,sans-serif">median ' + s.b.med + '</text>';
   });
-  var lab = series.map(function (s) { return s.name + ': ' + fmt(s.b.tot) + ' species, median ' + s.b.med; }).join('. ');
+  var lab = series.map(function (s) { return s.name + ': ' + fmt(s.b.tot) + ' counts, median ' + s.b.med; }).join('. ');
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Histogram of ' + (o.mode === '2n' ? 'diploid' : 'haploid') + ' chromosome numbers. ' + esc(lab) + '">' + svg + '</svg>';
 }
 

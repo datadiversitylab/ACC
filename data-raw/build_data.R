@@ -41,6 +41,46 @@ nums <- function(x) {
 }
 rows_by_species <- split(seq_len(nrow(d)), factor(d$Species_corrected, levels = unique(d$Species_corrected)))
 
+# The counts and the first row of each species
+firsts <- vapply(rows_by_species, function(i) i[1], numeric(1))
+sp_counts <- lapply(rows_by_species, function(i) unique(unlist(lapply(d$curated_roundup_N[i], nums))))
+
+# Confidence of each count, from its relatives only
+# Relatives are the other species in the genus, or the family, the order, the class or the phylum.
+# The first level with at least min_rel others is used. Each relative contributes its first count.
+# High: inside the middle half (Q1 to Q3). Medium: outside it, but inside the usual range,
+# which is Q1 - w to Q3 + w with w = 1.5 x IQR and at least 3. Low: outside the usual range.
+# A species with too few relatives at every level is not rated.
+min_rel <- 5
+keys <- names(rows_by_species)
+first_n <- vapply(sp_counts, function(x) x[1], numeric(1))
+span <- function(a, b) {
+  p <- ceiling(a)
+  q <- floor(b)
+  if (p <= q) c(p, q) else rep(round((a + b) / 2), 2)
+}
+members <- lapply(seq_along(levels_tax), function(j) {
+  split(seq_along(keys), match(d[[levels_tax[j]]][firsts], tax[[j]]))
+})
+confidence <- lapply(seq_along(keys), function(i) {
+  for (j in rev(seq_along(levels_tax))) {
+    id <- as.character(match(d[[levels_tax[j]]][firsts[i]], tax[[j]]))
+    others <- first_n[setdiff(members[[j]][[id]], i)]
+    if (length(others) >= min_rel) {
+      qs <- unname(quantile(others, c(0.25, 0.75), type = 7))
+      w <- 1.5 * max(qs[2] - qs[1], 2)
+      lo <- qs[1] - w
+      hi <- qs[2] + w
+      x <- sp_counts[[i]]
+      use <- span(lo, hi)
+      return(list(level = j - 1, k = length(others), mid = span(qs[1], qs[2]), use = c(max(1, use[1]), use[2]),
+                  tiers = ifelse(x >= qs[1] & x <= qs[2], "H", ifelse(x >= lo & x <= hi, "M", "L"))))
+    }
+  }
+  NULL
+})
+names(confidence) <- keys
+
 # JSON helpers (base R only)
 q <- function(x) {
   x <- gsub("\\\\", "\\\\\\\\", x)
@@ -60,8 +100,10 @@ species <- vapply(names(rows_by_species), function(k) {
   two <- paste(gsub(",", ", ", two), collapse = ", ")
   refs <- unique(match(unlist(by_row[i]), ref_list) - 1)
   orig <- d$Species_original[first]
+  cf <- confidence[[k]]
+  cfj <- if (is.null(cf)) "null" else paste0("[", paste(num(c(cf$level, cf$k, cf$mid, cf$use)), collapse = ","), ",", q(paste(cf$tiers, collapse = "")), "]")
   paste0("[", q(k), ",", if (orig == k) "0" else q(orig), ",", arr(num(ids)), ",",
-         arr(num(counts)), ",", q(two), ",", arr(num(refs)), "]")
+         arr(num(counts)), ",", q(two), ",", arr(num(refs)), ",", cfj, "]")
 }, character(1))
 
 # Phylum coverage, from the release summary
@@ -92,7 +134,6 @@ esc <- function(x) {
 }
 enc <- function(x) URLencode(x, reserved = TRUE)
 joinor <- function(v) if (length(v) == 1) v else paste(paste(v[-length(v)], collapse = ", "), "or", v[length(v)])
-keys <- names(rows_by_species)
 
 # File names. Two names that differ only by letter case would collide on a Mac, so the later one gets a number.
 seen <- new.env()
@@ -115,10 +156,31 @@ writeLines(c("// Species whose file name differs from the name in the data",
            "assets/js/slugs.js", useBytes = TRUE)
 
 # What each species needs for its page
-firsts <- vapply(rows_by_species, function(i) i[1], numeric(1))
-sp_counts <- lapply(rows_by_species, function(i) unique(unlist(lapply(d$curated_roundup_N[i], nums))))
 by_genus <- split(keys, d$genus[firsts])
 by_family <- split(keys, d$family[firsts])
+tier_name <- c(H = "High", M = "Medium", L = "Low")
+span_text <- function(a, b) if (a == b) paste0("n = ", num(a)) else paste0("n = ", num(a), " to ", num(b))
+confidence_html <- function(cf, counts, lv, many) {
+  if (is.null(cf)) return("<p class=\"flagline\"><a class=\"cf cf-N\" href=\"../learn.html#confidence\">Not rated</a> Too few relatives to compare.</p>")
+  gname <- lv[[levels_tax[cf$level + 1]]]
+  group <- paste0("the ", levels_tax[cf$level + 1], " ", if (cf$level == 4) paste0("<i>", esc(gname), "</i>") else esc(gname))
+  mid <- span_text(cf$mid[1], cf$mid[2])
+  use <- span_text(cf$use[1], cf$use[2])
+  lines <- vapply(seq_along(counts), function(t) {
+    tr <- cf$tiers[t]
+    sm <- if (tr == "H") {
+      sprintf("Within the middle half of the %d other species in %s (%s).", cf$k, group, mid)
+    } else if (tr == "M") {
+      sprintf("Outside the middle half (%s), but inside the usual range (%s), of the %d other species in %s.", mid, use, cf$k, group)
+    } else {
+      sprintf("Outside the usual range (%s) of the %d other species in %s.", use, cf$k, group)
+    }
+    if (cf$level <= 1) sm <- paste0(sm, " This is a broad comparison.")
+    pre <- if (many) paste0("n = ", num(counts[t]), " ") else ""
+    sprintf("<p class=\"flagline\">%s<a class=\"cf cf-%s\" href=\"../learn.html#confidence\">%s confidence</a> %s</p>", pre, tr, tier_name[[tr]], sm)
+  }, character(1))
+  paste(lines, collapse = "")
+}
 rel_item <- function(m) sprintf("<li><a href=\"%s.html\"><i>%s</i></a> <span class=\"meta\">n %s</span></li>",
                                 enc(slug[m]), esc(gsub("_", " ", m)), paste(num(sp_counts[[m]]), collapse = ", "))
 
@@ -136,8 +198,7 @@ for (k in keys) {
   orig <- if (nzchar(orig) && orig != k) paste0("<br>Listed in the source as <i>", esc(gsub("_", " ", orig)), "</i>") else ""
   two <- unique(d$ploidy_2N[i][nzchar(d$ploidy_2N[i])])
   two <- paste(gsub(",", ", ", two), collapse = ", ")
-  flag <- if (many) paste0("<p class=\"flagline\"><span class=\"flag\">Conflicting counts</span> This record lists more than one count.</p>",
-                           "<p class=\"note\">The chart below uses the first one, ", num(counts[1]), ". The sources are listed together under Sources.</p>") else ""
+  conf <- confidence_html(confidence[[k]], counts, lv, many)
 
   # Closest relatives: the genus, or the family when the genus has no other species
   rel <- setdiff(by_genus[[lv["genus"]]], k)
@@ -162,7 +223,7 @@ for (k in keys) {
     slug = slug[k], key = esc(k), name = esc(name), lineage = lineage, orig = orig, counts = esc(cs),
     countlabel = if (many) "haploid counts" else "haploid",
     two = if (nzchar(two)) paste0("<p class=\"meta\">Diploid number in the source: ", esc(two), "</p>") else "",
-    flag = flag, compare = paste0("../compare.html#a=", enc(k)), relnote = note,
+    flag = "", conf = conf, compare = paste0("../compare.html#a=", enc(k)), relnote = note,
     related = paste(vapply(rel, rel_item, character(1)), collapse = ""),
     srctitle = "Sources", sources = src,
     mailto = esc(sprintf("mailto:%s?subject=%s&body=%s", email, enc(paste("ACC correction:", name)), enc(body))),

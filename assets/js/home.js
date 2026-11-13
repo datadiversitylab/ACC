@@ -13,10 +13,11 @@ if (h0.fa) st.f = D.T[3].indexOf(h0.fa);
 if (h0.lo && +h0.lo > 0) st.lo = String(+h0.lo);
 if (h0.hi && +h0.hi > 0) st.hi = String(+h0.hi);
 if (h0.cf === '1') st.cf = true;
+
 if (['name', 'class', 'order', 'family', 'n'].indexOf(h0.so) > -1) { st.so = h0.so; st.di = h0.di === 'desc' ? 'desc' : 'asc'; }
 
 function persist() {
-  writeHash({ g: gStr(st.g) === 'all' ? '' : gStr(st.g), c: st.c.lv < 0 ? '' : gStr(st.c), m: st.m === '2n' ? '2n' : '', log: st.log ? 1 : '', q: st.q, p: st.ph, or: st.o < 0 ? '' : D.T[2][st.o], fa: st.f < 0 ? '' : D.T[3][st.f], lo: st.lo, hi: st.hi, cf: st.cf ? 1 : '', so: st.so, di: st.so && st.di === 'desc' ? 'desc' : '', pg: st.page > 1 ? st.page : '' });
+  writeHash({ cs: CS === 'hm' ? '' : CS, g: gStr(st.g) === 'all' ? '' : gStr(st.g), c: st.c.lv < 0 ? '' : gStr(st.c), m: st.m === '2n' ? '2n' : '', log: st.log ? 1 : '', q: st.q, p: st.ph, or: st.o < 0 ? '' : D.T[2][st.o], fa: st.f < 0 ? '' : D.T[3][st.f], lo: st.lo, hi: st.hi, cf: st.cf ? 1 : '', so: st.so, di: st.so && st.di === 'desc' ? 'desc' : '', pg: st.page > 1 ? st.page : '' });
 }
 
 // Hero numbers
@@ -38,7 +39,7 @@ countUp('f1', SP.length); countUp('f2', D.T[3].length); countUp('f3', D.T[0].len
 var chEl = document.getElementById('ch'), capEl = document.getElementById('cap'), legEl = document.getElementById('legend'), last = [];
 function line(name, b) {
   var u = st.m === '2n' ? '2n' : 'n';
-  return '<b>' + esc(name) + '</b>: ' + fmt(b.tot) + ' species, median ' + b.med + ', most common ' + u + ' is ' + b.mode + '.';
+  return '<b>' + esc(name) + '</b>: ' + fmt(b.tot) + ' counts from ' + fmt(b.sp) + ' of ' + fmt(b.n) + ' species, median ' + b.med + ', most common ' + u + ' is ' + b.mode + '.';
 }
 function drawChart() {
   var A = bins(gMembers(st.g), st.m), series = [{ b: A, name: gName(st.g) }], two = st.c.lv >= 0, k, rows = '';
@@ -55,6 +56,8 @@ function chartEvent() { track('chart', { group: gName(st.g), compare: st.c.lv >=
 var pa = Picker(document.getElementById('pa'), { label: 'Group', g: st.g, onchange: function (g) { st.g = g; drawChart(); chartEvent(); } });
 var pb = Picker(document.getElementById('pb'), { label: 'Compare with', none: true, g: st.c, onchange: function (g) { st.c = g; drawChart(); chartEvent(); } });
 if (st.c.lv >= 0 || st.m === '2n' || st.log) document.getElementById('opts').open = true;
+document.getElementById('cs').value = CS;
+document.getElementById('cs').onchange = function () { setCS(this.value); drawChart(); track('counts', { set: this.value }); };
 document.getElementById('mode').value = st.m;
 document.getElementById('mode').onchange = function () { st.m = this.value; drawChart(); chartEvent(); };
 document.getElementById('log').checked = st.log;
@@ -125,7 +128,7 @@ function drawTable() {
   if (st.page > pages) st.page = pages;
   var a = (st.page - 1) * PER, rows = match.slice(a, a + PER);
   $('b').innerHTML = rows.map(function (s) {
-    return '<tr><td><a href="' + spUrl(s.key) + '">' + esc(s.name) + '</a>' + (s.orig ? '<div class="meta">Listed as ' + esc(s.orig) + '</div>' : '') + '</td><td class="t hide">' + D.T[1][s.t[1]] + '</td><td class="t hide">' + D.T[2][s.t[2]] + '</td><td class="t hide">' + D.T[3][s.t[3]] + '</td><td class="r"><b>' + s.n.join(', ') + '</b>' + (s.n.length > 1 ? '<div><span class="flag" title="This record lists more than one count">Conflicting counts</span></div>' : '') + '</td></tr>';
+    return '<tr><td><a href="' + spUrl(s.key) + '">' + esc(s.name) + '</a>' + (s.orig ? '<div class="meta">Listed as ' + esc(s.orig) + '</div>' : '') + '</td><td class="t hide">' + D.T[1][s.t[1]] + '</td><td class="t hide">' + D.T[2][s.t[2]] + '</td><td class="t hide">' + D.T[3][s.t[3]] + '</td><td class="r"><b>' + s.n.join(', ') + '</b>' + '</td></tr>';
   }).join('') || '<tr><td colspan="5" class="meta">No species match.' + didYouMean() + '</td></tr>';
   $('c').textContent = n ? 'Showing ' + fmt(a + 1) + ' to ' + fmt(a + rows.length) + ' of ' + fmt(n) + ' species' : 'No species';
   $('pg').innerHTML = n > PER ? pager(n) : '';
